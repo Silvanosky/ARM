@@ -12,7 +12,7 @@ SECTIONS
     . = ALIGN(4);
     KEEP(*(.isr_vector))
     . = ORIGIN(FLASH) + 512;
-  } >FLASH
+  } > FLASH
 
   .text :
   {
