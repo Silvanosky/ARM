@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=/home/chat/arm/ARM/tp03/Inc
+HeaderPath=/home/chat/arm/ARM/TPS/tp03/Inc
 HeaderFiles=stm32f4xx_it.h;stm32f4xx_hal_conf.h;main.h;
-SourcePath=/home/chat/arm/ARM/tp03/Src
+SourcePath=/home/chat/arm/ARM/TPS/tp03/Src
 SourceFiles=stm32f4xx_it.c;stm32f4xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]
