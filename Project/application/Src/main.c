@@ -46,8 +46,11 @@
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 #include <time.h>
+#include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/hmac_drbg.h"
+#include "mbedtls/bignum.h"
+#include "mbedtls/x509.h"
 #include "mbedtls/rsa.h"
 /* USER CODE END Includes */
 
@@ -99,7 +102,7 @@ void UART_SEND(char *str) {
 }
 unsigned char val = 0;
 int myfun(void *param, unsigned char *buffer, size_t length){
-  (void *)param;
+//  (void *)param;
   for (size_t index = 0; index < length; index++) {
     buffer[index] = val++;
   }
@@ -135,7 +138,10 @@ static void MX_USART1_UART_Init(void);
 int main(void)
 {
   /* useR CODE BEGIN 1 */
-
+  mbedtls_rsa_context rsa_cont;
+  mbedtls_hmac_drbg_context cont;
+  const char *personalization = "0123456789";
+  const mbedtls_md_info_t *info;
   /* USER CODE END 1 */
   
 
@@ -164,39 +170,33 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //unsigned char c;
   //HAL_UART_Receive_IT (&huart1, &c, 1);
-  /*
-    mbedtls_entropy_context entropy_cont;
-    mbedtls_entropy_init(&entropy_cont);
-  */
+  
 
-
-  mbedtls_ctr_drbg_context rng_context;
-  mbedtls_ctr_drbg_init(&rng_context);
-  HAL_Delay(100);
-
-  mbedtls_rsa_context rsa_cont;
-  mbedtls_rsa_init(&rsa_cont, MBEDTLS_RSA_PKCS_V15, 0); //third parameter ignored
-  HAL_Delay(100);
-
-  const char *personalization = "dfajenFNXOmdfjacnI>ndfN";
-  unsigned size = strlen((const unsigned char*)personalization);
+  //unsigned size = strlen((const unsigned char*)personalization);
   //no need d'import string.h pour un strlen
 
-  UART_SEND("HELLO WORLS\n");
+  UART_SEND("HELLO WORLD\n");
 
-  mbedtls_hmac_drbg_context cont;
+  HAL_Delay(1000);
+  mbedtls_hmac_drbg_init(&cont);
+  HAL_Delay(1000);
 
+  info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+  HAL_Delay(1000);
+  if (!info)
+    UART_SEND("Info failed\n");
+  else
+    UART_SEND("Info ok");
 
-  //HAL_Delay(10000);
-  int error = mbedtls_hmac_drbg_seed_buf(&cont,
-                                    mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
+  HAL_Delay(1000);
+  int error = mbedtls_hmac_drbg_seed_buf(&cont, info,
                                     (unsigned char *) personalization,
-                                    size);
-  //int error = mbedtls_ctr_drbg_seed(&rng_context, myfun, NULL,
-  //    (unsigned char *) personalization, size);
-  HAL_Delay(10000);
-  UART_SEND("HELLO WORLS 2\n");
-
+                                    10);
+  HAL_Delay(1000);
+  UART_SEND("Seed done\n");
+  
+  mbedtls_rsa_init(&rsa_cont, MBEDTLS_RSA_PKCS_V15, 0); //third parameter ignored
+  HAL_Delay(1000);
 
   if (error != 0) {
     if (error == MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED) {
@@ -213,7 +213,7 @@ int main(void)
   }
   HAL_Delay(1000);
   UART_SEND("step 1 done !\n");
-  error = mbedtls_rsa_gen_key(&rsa_cont, my_ctr_drbg_random, &rng_context, 128, 65537);
+  error = mbedtls_rsa_gen_key(&rsa_cont, my_ctr_drbg_random, &cont, 128, 65537);
   HAL_Delay(1000);
 
   if (error != 0) {
@@ -308,16 +308,9 @@ void SystemClock_Config(void)
   * @param None
   * @retval None
   */
-static void MX_IWDG_Init(void)
+/*static void MX_IWDG_Init(void)
 {
 
-  /* USER CODE BEGIN IWDG_Init 0 */
-
-  /* USER CODE END IWDG_Init 0 */
-
-  /* USER CODE BEGIN IWDG_Init 1 */
-
-  /* USER CODE END IWDG_Init 1 */
   hiwdg.Instance = IWDG;
   hiwdg.Init.Prescaler = IWDG_PRESCALER_4;
   hiwdg.Init.Reload = 4095;
@@ -325,11 +318,9 @@ static void MX_IWDG_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN IWDG_Init 2 */
 
-  /* USER CODE END IWDG_Init 2 */
 
-}
+}*/
 
 /**
   * @brief USART1 Initialization Function
