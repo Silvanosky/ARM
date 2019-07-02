@@ -45,8 +45,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <time.h>
 #include "mbedtls/ctr_drbg.h"
-#include "mbedtls/entropy.h"
 #include "mbedtls/rsa.h"
 /* USER CODE END Includes */
 
@@ -91,6 +91,25 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     received = true;
   }
 }
+
+void UART_SEND(char *str) {
+  HAL_UART_Transmit (&huart1, (unsigned char *)str,
+      strlen((unsigned char *)str), 300);
+}
+unsigned char val = 0;
+int myfun(void *param, unsigned char *buffer, size_t length){
+  (void *)param;
+  for (size_t index = 0; index < length; index++) {
+    buffer[index] = val++;
+  }
+  UART_SEND("entropy called\n");
+  return 0;
+}
+int my_ctr_drbg_random( void *p_rng, unsigned char *output, size_t output_len ) {
+  UART_SEND("ctr_drbg called\n");
+  return mbedtls_ctr_drbg_random(p_rng, output, output_len);
+}
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -114,7 +133,7 @@ static void MX_IWDG_Init(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
+  /* useR CODE BEGIN 1 */
 
   /* USER CODE END 1 */
   
@@ -144,68 +163,65 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //unsigned char c;
   //HAL_UART_Receive_IT (&huart1, &c, 1);
-  mbedtls_entropy_context entropy_cont;
-  mbedtls_entropy_init(&entropy_cont);
+  /*
+    mbedtls_entropy_context entropy_cont;
+    mbedtls_entropy_init(&entropy_cont);
+  */
+
 
   mbedtls_ctr_drbg_context rng_context;
   mbedtls_ctr_drbg_init(&rng_context);
+  HAL_Delay(100);
 
   mbedtls_rsa_context rsa_cont;
   mbedtls_rsa_init(&rsa_cont, MBEDTLS_RSA_PKCS_V15, 0); //third parameter ignored
+  HAL_Delay(100);
 
   const char *personalization = "dfajenFNXOmdfjacnI>ndfN";
   unsigned size = strlen((const unsigned char*)personalization);
   //no need d'import string.h pour un strlen
 
+  UART_SEND("HELLO WORLS\n");
 
-  bool b = true;
-  int error;
-  while (b) {
-    error = mbedtls_ctr_drbg_seed(&rng_context, mbedtls_entropy_func,
-        &entropy_cont, (unsigned char *) personalization, size);
-
-    if (error != 0) {
-      if (error == MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED) {
-        unsigned char err[] = "error1\n";
-        HAL_UART_Transmit (&huart1, err, strlen(err), 200);
-      }
-      else if (error == MBEDTLS_ERR_AES_INVALID_KEY_LENGTH) {
-
-        unsigned char err[] = "error2\n";
-        HAL_UART_Transmit (&huart1, err, strlen(err), 200);
-      }
-      else {
-
-        unsigned char err[] = "eror?\n";
-        HAL_UART_Transmit (&huart1, err, strlen(err), 200);
-      }
-      mbedtls_entropy_free(&entropy_cont);
-      mbedtls_entropy_init(&entropy_cont);
-
-    } else {
-      unsigned char err[] = "INCROYABLE !!!\n";
-      HAL_UART_Transmit (&huart1, err, strlen(err), 200);
-      b = false;
-    }
-  }
-  error = mbedtls_rsa_gen_key(&rsa_cont, mbedtls_ctr_drbg_random, &rng_context, 4096, 65537);
+  int error = mbedtls_ctr_drbg_seed(&rng_context, myfun, NULL,
+      (unsigned char *) personalization, size);
 
   if (error != 0) {
-    unsigned char err[] = "error5\n";
-    HAL_UART_Transmit (&huart1, err, strlen(err), 200);
+    if (error == MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED) {
+      UART_SEND("error1\n");
+    }
+    else if (error == MBEDTLS_ERR_AES_INVALID_KEY_LENGTH) {
+
+      UART_SEND("error2\n");
+    }
+    else {
+      UART_SEND("eror?\n");
+    }
+
+  }
+  HAL_Delay(100);
+  UART_SEND("step 1 done !\n");
+  error = mbedtls_rsa_gen_key(&rsa_cont, my_ctr_drbg_random, &rng_context, 128, 3);
+
+  if (error != 0) {
+      UART_SEND("error5\n");
   }
   else {
-    unsigned char err[] = "allgood\n";
-    HAL_UART_Transmit (&huart1, err, 8, 200);
+      UART_SEND("allgood\n");
   }
+      UART_SEND("step 2 done !\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  unsigned count = 0;
   while (1)
   {
-
-
+    if (count < 5) {
+      UART_SEND("INCROYABLE !!!\n");
+      count++;
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
