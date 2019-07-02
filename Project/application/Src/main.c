@@ -47,6 +47,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include "mbedtls/ctr_drbg.h"
+#include "mbedtls/hmac_drbg.h"
 #include "mbedtls/rsa.h"
 /* USER CODE END Includes */
 
@@ -117,7 +118,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART1_UART_Init(void);
-static void MX_IWDG_Init(void);
+//static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -158,7 +159,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_USART1_UART_Init();
-  MX_IWDG_Init();
+  //MX_IWDG_Init();
   MX_MBEDTLS_Init();
   /* USER CODE BEGIN 2 */
   //unsigned char c;
@@ -183,8 +184,19 @@ int main(void)
 
   UART_SEND("HELLO WORLS\n");
 
-  int error = mbedtls_ctr_drbg_seed(&rng_context, myfun, NULL,
-      (unsigned char *) personalization, size);
+  mbedtls_hmac_drbg_context cont;
+
+
+  //HAL_Delay(10000);
+  int error = mbedtls_hmac_drbg_seed_buf(&cont,
+                                    mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
+                                    (unsigned char *) personalization,
+                                    size);
+  //int error = mbedtls_ctr_drbg_seed(&rng_context, myfun, NULL,
+  //    (unsigned char *) personalization, size);
+  HAL_Delay(10000);
+  UART_SEND("HELLO WORLS 2\n");
+
 
   if (error != 0) {
     if (error == MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED) {
@@ -199,9 +211,10 @@ int main(void)
     }
 
   }
-  HAL_Delay(100);
+  HAL_Delay(1000);
   UART_SEND("step 1 done !\n");
-  error = mbedtls_rsa_gen_key(&rsa_cont, my_ctr_drbg_random, &rng_context, 128, 3);
+  error = mbedtls_rsa_gen_key(&rsa_cont, my_ctr_drbg_random, &rng_context, 128, 65537);
+  HAL_Delay(1000);
 
   if (error != 0) {
       UART_SEND("error5\n");
