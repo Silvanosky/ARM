@@ -25,6 +25,11 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <stdbool.h>
+#include <stdio.h>
+#include "uart.h"
+#include "xmodem.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,6 +51,53 @@
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+
+void *_sbrk(int n)
+{
+  return (void *) -1;
+}
+
+int _write (int fd, const void *buf, int count)
+{
+	if (fd == 1)
+	{
+    HAL_UART_Transmit (&huart1, (unsigned char *) buf, count, count * 50);
+    return count;
+	}
+	return -1;
+}
+
+int _close (int fd)
+{
+	return 0;
+}
+
+int _fstat (int fd, void *buf)
+{
+	return 0;
+}
+
+int _isatty (int fd)
+{
+	return 0;
+}
+
+int _lseek (int fd, int offset, int whence)
+{
+	return 0;
+}
+
+int _read (int fd, void *buf, int count)
+{
+	return 0;
+}
+
+static bool received = false;
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    received = true;
+}
 
 /* USER CODE END PV */
 
@@ -95,20 +147,29 @@ int main(void)
   MX_MBEDTLS_Init();
   /* USER CODE BEGIN 2 */
 
+  if(!HAL_GPIO_ReadPin(BTN_GPIO_Port, BTN_Pin))
+  {
+	  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+  }
+  else {
+	  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* Turn on the green LED to indicate, that we are in bootloader mode.*/
-    HAL_GPIO_WritePin(GPIOC, LED1_Pin, GPIO_PIN_SET);
-    /* Ask for new data and start the Xmodem protocol. */
-  //  uart_transmit_str((uint8_t*)"Please send a new binary file with Xmodem protocol to update the firmware.\n\r");
- //   xmodem_receive();
-    /* We only exit the xmodem protocol, if there are any errors.
-     * In that case, notify the user and start over. */
-//    uart_transmit_str((uint8_t*)"\n\rFailed... Please try again.\n\r");
+	  __WFE ();
+	  /* Turn on the green LED to indicate, that we are in bootloader mode.*/
+	  /* Ask for new data and start the Xmodem protocol. */
+	  uart_tx_str((uint8_t*)"Please send a new binary file with Xmodem protocol to update the firmware.\n\r");
+	  //Download new program from host
+	  if (!xmodem_receive()) {
+		  uart_tx_str((uint8_t*)"\n\rFailed... Please try again.\n\r");
+		  continue;
+	  }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -134,7 +195,12 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 16;
+  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -143,12 +209,12 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -198,6 +264,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
