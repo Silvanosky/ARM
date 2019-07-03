@@ -114,48 +114,25 @@ void myExit(int status) {
     UART_SEND("exit with normal error code\n");
   return;
 }
-int mysnprintf(char* str, size_t n, const char* format, ...) {
-  UART_SEND("snprintf called\n");
+int mysnprintf(char* str, const char* format, ...) {
+  UART_SEND("snprintf called\n format:");
+  UART_SEND(format);
   return 0;
 }
-char convertToHexa(uint32_t u) {
-  if (u <= 9)
-    return u + '0';
-  else if (u <= 15)
-    return u - 10 + 'A';
-  else {
-    UART_SEND("tu code comme un pied");
-    return '0';
-  }
-}
 void print_mpi_UART(mbedtls_mpi *mpi) {
-  size_t n = mpi->n * 8 + 2;
-  char buffer[n];
-  size_t buffer_index = 0;
-
+  size_t n = mpi->n * 4 + 2;
+  char* buffer[n];
   if (mpi->s > 0){
-    UART_SEND("greater than 0 : ");
-  } else if (mpi->s < 0) {
-    UART_SEND("smaller than 0 : ");
-    buffer[buffer_index++] = '-';
-  }
+    UART_SEND("greater than 0");
+  } else if (mpi->s < 0)
+    UART_SEND("smaller than 0");
+    buffer[index++]
   else {
-    UART_SEND("equal 0 : ");
+    UART_SEND("equal 0");
   }
-
   for (size_t index = 0; index < mpi->n; index++) {
-    uint32_t val = mpi->p[index];
-
-    for (unsigned shift = 0; shift < 32; shift+=4) {
-      buffer[buffer_index++] = convertToHexa( (val << shift) >> 28);
-    }
-
+  
   }
-
-  for (; buffer_index < n; buffer_index++)
-    buffer[buffer_index++] = '\0';
-
-  UART_SEND(buffer);
 }
 
 /* USER CODE END PV */
@@ -280,21 +257,7 @@ mbedtls_platform_set_snprintf(mysnprintf);
       UART_SEND("finished rsa_gen !\n");
   }
 
-  UART_SEND("\nsending N\n");
-  print_mpi_UART(&rsa_cont.N);
-  UART_SEND("\nfinished sending N\n");
-
-  UART_SEND("\nsending E\n");
-  print_mpi_UART(&rsa_cont.E);
-  UART_SEND("\nfinished sending E\n");
-  
-  UART_SEND("\nsending D\n");
-  print_mpi_UART(&rsa_cont.D);
-  UART_SEND("\nfinished sending D\n");
-
-  UART_SEND("\nsending P\n");
-  print_mpi_UART(&rsa_cont.P);
-  UART_SEND("\nfinished sending P\n");
+  UART_SEND("");
   /* USER CODE END 2 */
 
   /* Infinite loop */
