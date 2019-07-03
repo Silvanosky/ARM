@@ -133,6 +133,7 @@ void print_mpi_UART(mbedtls_mpi *mpi) {
   char buffer[n];
   size_t buffer_index = 0;
 
+#ifdef DEBUG_MODE
   if (mpi->s > 0){
     UART_SEND("greater than 0 : ");
   } else if (mpi->s < 0) {
@@ -142,6 +143,7 @@ void print_mpi_UART(mbedtls_mpi *mpi) {
   else {
     UART_SEND("equal 0 : ");
   }
+#endif
 
   for (size_t index = 0; index < mpi->n; index++) {
     uint32_t val = mpi->p[index];
@@ -237,13 +239,19 @@ mbedtls_platform_set_snprintf(mysnprintf);
   const char *personalization = "dfajenFNXOmdfjacnI>ndfN";
   //no need d'import string.h pour un strlen
 
+#ifdef DEBUG_MODE
   UART_SEND("HELLO WORLS\n");
+#endif
 
   const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
 
+#ifdef DEBUG_MODE
   UART_SEND("got info\n");
+#endif
 
+#ifdef DEBUG_MODE
   UART_SEND_LEN(md_info->name, md_info->size);
+#endif
 
 
   HAL_Delay(1000);
@@ -267,27 +275,41 @@ mbedtls_platform_set_snprintf(mysnprintf);
     }
 
   }
+#ifdef DEBUG_MODE
   UART_SEND("seeding done\n");
+#endif
   HAL_Delay(1000);
+#ifdef DEBUG_MODE
   UART_SEND("starting rsa_gen !\n");
+#endif
   error = mbedtls_rsa_gen_key(&rsa_cont, my_ctr_drbg_random, &cont, 128, 65537);
   HAL_Delay(1000);
 
   if (error != 0) {
       UART_SEND("error5\n");
   }
+#ifdef DEBUG_MODE
   else {
       UART_SEND("finished rsa_gen !\n");
   }
+#endif
 
+#ifdef DEBUG_MODE
   UART_SEND("\nsending N\n");
+#endif
   print_mpi_UART(&rsa_cont.N);
+#ifdef DEBUG_MODE
   UART_SEND("\nfinished sending N\n");
+#endif
 
+#ifdef DEBUG_MODE
   UART_SEND("\nsending E\n");
+#endif
   print_mpi_UART(&rsa_cont.E);
+#ifdef DEBUG_MODE
   UART_SEND("\nfinished sending E\n");
-  
+#endif
+#ifdef DEBUG_MODE
   UART_SEND("\nsending D\n");
   print_mpi_UART(&rsa_cont.D);
   UART_SEND("\nfinished sending D\n");
@@ -295,6 +317,19 @@ mbedtls_platform_set_snprintf(mysnprintf);
   UART_SEND("\nsending P\n");
   print_mpi_UART(&rsa_cont.P);
   UART_SEND("\nfinished sending P\n");
+#endif
+  unsigned char sha256[64];
+  while (!received)
+    HAL_UART_Receive_IT (&huart1, sha256, sizeof(sha256));
+  unsigned char signedSHA[rsa_cont.len];
+
+  error = mbedtls_rsa_pkcs1_sign(&rsa_cont, my_ctr_drbg_random, &cont,
+      MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256, sizeof(sha256), sha256, signedSHA);
+
+  if (error) {
+    UART_SEND("signature failed");
+  }
+  HAL_UART_Transmit (&huart1, signedSHA, sizeof(signedSHA) , 300);
   /* USER CODE END 2 */
 
   /* Infinite loop */
