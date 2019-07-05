@@ -4,6 +4,11 @@ import serial
 port = "/dev/ttyUSB0"
 baud = 115200
 
+def debug(f):
+    while True:
+        s = f.readline()
+        print(str(s))
+
 try:
     # Open serial
     
@@ -23,11 +28,13 @@ try:
 
     with open("sha", 'r') as sha:
         sha_txt = sha.read()
-    print("SHA256 is: " + sha_txt[0:-2])
+    sha_txt = sha_txt[0:-2] + '\0'
+    print("SHA256 is: " + sha_txt)
     com.write(sha_txt.encode('ascii'))
     print("SHA written")
 
     print("Receiving signature")
+    debug(com)
     sign = com.readline()
     print("Signature: " + str(sign))
 
