@@ -285,10 +285,10 @@ mbedtls_platform_set_snprintf(mysnprintf);
   error = mbedtls_rsa_gen_key(&rsa_cont, my_ctr_drbg_random, &cont, 128, 65537);
   HAL_Delay(1000);
 
+#ifdef DEBUG_MODE
   if (error != 0) {
       UART_SEND("error5\n");
   }
-#ifdef DEBUG_MODE
   else {
       UART_SEND("finished rsa_gen !\n");
   }
@@ -309,6 +309,9 @@ mbedtls_platform_set_snprintf(mysnprintf);
 #ifdef DEBUG_MODE
   UART_SEND("\nfinished sending E\n");
 #endif
+
+  UART_SEND("\n");
+
 #ifdef DEBUG_MODE
   UART_SEND("\nsending D\n");
   print_mpi_UART(&rsa_cont.D);
@@ -330,6 +333,9 @@ mbedtls_platform_set_snprintf(mysnprintf);
     UART_SEND("signature failed");
   }
   HAL_UART_Transmit (&huart1, signedSHA, sizeof(signedSHA) , 300);
+  
+  UART_SEND("\n");
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
