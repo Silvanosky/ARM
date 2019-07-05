@@ -185,8 +185,9 @@ int main(void)
 {
   /* useR CODE BEGIN 1 */
 //allows for stack allocation
-unsigned char memory_buffer[10000];
-mbedtls_memory_buffer_alloc_init(memory_buffer, sizeof(memory_buffer));
+#define MEM_BUFF_SIZE 10000
+unsigned char memory_buffer[MEM_BUFF_SIZE];
+mbedtls_memory_buffer_alloc_init(memory_buffer, 10000);
 
 mbedtls_platform_set_exit(myExit);
 mbedtls_platform_set_snprintf(mysnprintf);
@@ -297,7 +298,9 @@ mbedtls_platform_set_snprintf(mysnprintf);
 #ifdef DEBUG_MODE
   UART_SEND("\nsending N\n");
 #endif
+
   print_mpi_UART(&rsa_cont.N);
+
 #ifdef DEBUG_MODE
   UART_SEND("\nfinished sending N\n");
 #endif
@@ -305,7 +308,9 @@ mbedtls_platform_set_snprintf(mysnprintf);
 #ifdef DEBUG_MODE
   UART_SEND("\nsending E\n");
 #endif
+
   print_mpi_UART(&rsa_cont.E);
+
 #ifdef DEBUG_MODE
   UART_SEND("\nfinished sending E\n");
 #endif
@@ -321,20 +326,53 @@ mbedtls_platform_set_snprintf(mysnprintf);
   print_mpi_UART(&rsa_cont.P);
   UART_SEND("\nfinished sending P\n");
 #endif
-  unsigned char sha256[64];
-  while (!received)
-    HAL_UART_Receive_IT (&huart1, sha256, sizeof(sha256));
-  unsigned char signedSHA[rsa_cont.len];
 
-  error = mbedtls_rsa_pkcs1_sign(&rsa_cont, my_ctr_drbg_random, &cont,
-      MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256, sizeof(sha256), sha256, signedSHA);
 
-  if (error) {
-    UART_SEND("signature failed");
-  }
-  HAL_UART_Transmit (&huart1, signedSHA, sizeof(signedSHA) , 300);
+  HAL_Delay(100);
   
+#define SHA256_SIZE 64
+  unsigned char sha256[SHA256_SIZE];
+  unsigned char signedSHA[500];
+  HAL_StatusTypeDef state;
+  while ((state = HAL_UART_Receive (&huart1, sha256, SHA256_SIZE, 3000)) != HAL_OK) {
+    if (state == HAL_BUSY)
+      UART_SEND("errorBUSY\n");
+    else if (state == HAL_TIMEOUT)
+      UART_SEND("errorTIMEOUT\n");
+    else if (state == HAL_ERROR)
+      UART_SEND("errorERROR\n");
+  }
+  //HAL_UART_Receive (&huart1, sha256 + 1, SHA256_SIZE - 1, 3000);
+  
+  HAL_Delay(100);
+  UART_SEND_LEN((char *)sha256, SHA256_SIZE);
   UART_SEND("\n");
+
+
+  error = mbedtls_rsa_rsassa_pkcs1_v15_sign(&rsa_cont, my_ctr_drbg_random, &cont,
+      MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256, SHA256_SIZE, sha256, signedSHA);
+
+  HAL_Delay(100);
+  if (error) {
+    if (error == MBEDTLS_ERR_RSA_BAD_INPUT_DATA) {
+      UART_SEND("signature failed 0\n");
+    }
+    if (error == MBEDTLS_ERR_RSA_HW_ACCEL_FAILED) {
+      UART_SEND("signature failed 1\n");
+    }
+    if (error == MBEDTLS_ERR_RSA_INVALID_PADDING) {
+      UART_SEND("signature failed 2\n");
+    }
+    if (error == MBEDTLS_ERR_RSA_KEY_CHECK_FAILED) {
+      UART_SEND("signature failed 3\n");
+    }
+    UART_SEND("received sha256 ");
+    UART_SEND_LEN((char *)sha256, SHA256_SIZE);
+    UART_SEND(" \n");
+  } else {
+    HAL_UART_Transmit (&huart1, signedSHA, sizeof(signedSHA) , 300);
+    UART_SEND("\n");
+  }
   
   /* USER CODE END 2 */
 
@@ -346,8 +384,8 @@ mbedtls_platform_set_snprintf(mysnprintf);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    /*__WFE ();
-    HAL_IWDG_Refresh (&hiwdg);
+    __WFE ();
+    /*HAL_IWDG_Refresh (&hiwdg);
     if (received)
     {
       received = false;
