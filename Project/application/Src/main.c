@@ -41,6 +41,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "mbedtls.h"
+#include "UART.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -283,7 +284,7 @@ mbedtls_platform_set_snprintf(mysnprintf);
 #ifdef DEBUG_MODE
   UART_SEND("starting rsa_gen !\n");
 #endif
-  error = mbedtls_rsa_gen_key(&rsa_cont, my_ctr_drbg_random, &cont, 128, 65537);
+  error = mbedtls_rsa_gen_key(&rsa_cont, mbedtls_hmac_drbg_random, &cont, 1024, 65537);
   HAL_Delay(1000);
 
 #ifdef DEBUG_MODE
@@ -294,6 +295,32 @@ mbedtls_platform_set_snprintf(mysnprintf);
       UART_SEND("finished rsa_gen !\n");
   }
 #endif
+
+  /* alors ce truc marche mais ça print pas un truc lisible
+  unsigned char    N[50];
+  size_t   N_len = 50;
+  unsigned char    E[50];
+  size_t   E_len = 50;
+mbedtls_rsa_export_raw (&rsa_cont,
+  N,
+  N_len,
+  NULL,
+  0,
+  NULL,
+  0,
+  NULL,
+  0,
+  E,
+  E_len);
+
+UART_SEND("N : ");
+UART_SEND_LEN((char*)N, N_len);
+UART_SEND("\n");
+
+UART_SEND("E : ");
+UART_SEND_LEN((char*)E, E_len);
+UART_SEND("\n");
+*/
 
 #ifdef DEBUG_MODE
   UART_SEND("\nsending N\n");
@@ -343,13 +370,25 @@ mbedtls_platform_set_snprintf(mysnprintf);
       UART_SEND("errorERROR\n");
   }
   //HAL_UART_Receive (&huart1, sha256 + 1, SHA256_SIZE - 1, 3000);
-  
   HAL_Delay(100);
   UART_SEND_LEN((char *)sha256, SHA256_SIZE);
   UART_SEND("\n");
 
+  /*
+  if (rsa_cont.padding == MBEDTLS_RSA_PKCS_V15)
+    UART_SEND("bon padding\n");
+  else
+    UART_SEND("mauvais padding\n");
 
-  error = mbedtls_rsa_rsassa_pkcs1_v15_sign(&rsa_cont, my_ctr_drbg_random, &cont,
+  if (mbedtls_md_info_from_type(MBEDTLS_MD_SHA256))
+    UART_SEND("bon md\n");
+  else
+    UART_SEND("mauvais md\n");
+    */
+
+
+  
+  error = mbedtls_rsa_rsassa_pkcs1_v15_sign(&rsa_cont, mbedtls_hmac_drbg_random, &cont,
       MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256, SHA256_SIZE, sha256, signedSHA);
 
   HAL_Delay(100);
