@@ -75,6 +75,8 @@ IWDG_HandleTypeDef hiwdg;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+mbedtls_hmac_drbg_context cont;
+mbedtls_rsa_context rsa_cont;
 
 /* USER CODE BEGIN PV */
 
@@ -97,28 +99,27 @@ void UART_SEND(char *str) {
   HAL_UART_Transmit (&huart1, (unsigned char *)str,
       strlen((unsigned char *)str), 300);
 }
+
 void UART_SEND_LEN(const char *str, unsigned length) {
   HAL_UART_Transmit (&huart1, (unsigned char *)str,
       length, 300);
 }
-unsigned char val = 0;
-int my_ctr_drbg_random( void *p_rng, unsigned char *output, size_t output_len ) {
-  //UART_SEND("random called\n");
-  return mbedtls_hmac_drbg_random(p_rng, output, output_len);
-}
+
 void myExit(int status) {
   if (status == 1)
     UART_SEND("exit with error code 1\n");
-  else if (status) 
-    UART_SEND("exit with error random code\n");
-  else
+  else if (!status) 
     UART_SEND("exit with normal error code\n");
+  else
+    UART_SEND("exit with random error code\n");
   return;
 }
+
 int mysnprintf(char* str, size_t n, const char* format, ...) {
   UART_SEND("snprintf called\n");
   return 0;
 }
+
 char convertToHexa(uint32_t u) {
   if (u <= 9)
     return u + '0';
@@ -129,22 +130,14 @@ char convertToHexa(uint32_t u) {
     return '0';
   }
 }
+
+
+unsigned char val = 0;
 void print_mpi_UART(mbedtls_mpi *mpi) {
   size_t n = mpi->n * 8 + 2;
   char buffer[n];
   size_t buffer_index = 0;
 
-#ifdef DEBUG_MODE
-  if (mpi->s > 0){
-    UART_SEND("greater than 0 : ");
-  } else if (mpi->s < 0) {
-    UART_SEND("smaller than 0 : ");
-    buffer[buffer_index++] = '-';
-  }
-  else {
-    UART_SEND("equal 0 : ");
-  }
-#endif
 
   for (size_t index = 0; index < mpi->n; index++) {
     uint32_t val = mpi->p[index];
@@ -162,100 +155,12 @@ void print_mpi_UART(mbedtls_mpi *mpi) {
 }
 #define DEBUG_MODE
 
-/* USER CODE END PV */
 
-/* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
-static void MX_USART1_UART_Init(void);
-//static void MX_IWDG_Init(void);
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
-  /* useR CODE BEGIN 1 */
-//allows for stack allocation
-#define MEM_BUFF_SIZE 10000
-unsigned char memory_buffer[MEM_BUFF_SIZE];
-mbedtls_memory_buffer_alloc_init(memory_buffer, 10000);
-
-mbedtls_platform_set_exit(myExit);
-mbedtls_platform_set_snprintf(mysnprintf);
-
-  /* USER CODE END 1 */
-  
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_USART2_UART_Init();
-  MX_USART1_UART_Init();
-  //MX_IWDG_Init();
-  MX_MBEDTLS_Init();
-  /* USER CODE BEGIN 2 */
-  //unsigned char c;
-  //HAL_UART_Receive_IT (&huart1, &c, 1);
-  /*
-    mbedtls_entropy_context entropy_cont;
-    mbedtls_entropy_init(&entropy_cont);
-  */
-
-
-  //mbedtls_ctr_drbg_context rng_context;
-  //mbedtls_ctr_drbg_init(&rng_context);
-  mbedtls_hmac_drbg_context cont;
-  mbedtls_hmac_drbg_init(&cont);
-  //mbedtls_md_init(&cont.md_ctx);
-  HAL_Delay(100);
-
-  mbedtls_rsa_context rsa_cont;
-  mbedtls_rsa_init(&rsa_cont, MBEDTLS_RSA_PKCS_V15, 0); //third parameter ignored
-  HAL_Delay(100);
-
+bool keyGenerated = false;
+void genKey() {
   const char *personalization = "dfajenFNXOmdfjacnI>ndfN";
-  //no need d'import string.h pour un strlen
-
-#ifdef DEBUG_MODE
-  UART_SEND("HELLO WORLS\n");
-#endif
 
   const mbedtls_md_info_t* md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-
-#ifdef DEBUG_MODE
-  UART_SEND("got info\n");
-#endif
-
-#ifdef DEBUG_MODE
-  UART_SEND_LEN(md_info->name, md_info->size);
-#endif
-
 
   HAL_Delay(1000);
   int error = mbedtls_hmac_drbg_seed_buf(&cont,
@@ -278,90 +183,22 @@ mbedtls_platform_set_snprintf(mysnprintf);
     }
 
   }
-#ifdef DEBUG_MODE
-  UART_SEND("seeding done\n");
-#endif
   HAL_Delay(1000);
-#ifdef DEBUG_MODE
-  UART_SEND("starting rsa_gen !\n");
-#endif
   error = mbedtls_rsa_gen_key(&rsa_cont, mbedtls_hmac_drbg_random, &cont, 1024, 65537);
   HAL_Delay(1000);
 
-#ifdef DEBUG_MODE
-  if (error != 0) {
-      UART_SEND("error5\n");
-  }
-  else {
-      UART_SEND("finished rsa_gen !\n");
-  }
-#endif
-
-  /* alors ce truc marche mais ça print pas un truc lisible
-  unsigned char    N[50];
-  size_t   N_len = 50;
-  unsigned char    E[50];
-  size_t   E_len = 50;
-mbedtls_rsa_export_raw (&rsa_cont,
-  N,
-  N_len,
-  NULL,
-  0,
-  NULL,
-  0,
-  NULL,
-  0,
-  E,
-  E_len);
-
-UART_SEND("N : ");
-UART_SEND_LEN((char*)N, N_len);
-UART_SEND("\n");
-
-UART_SEND("E : ");
-UART_SEND_LEN((char*)E, E_len);
-UART_SEND("\n");
-*/
-
-#ifdef DEBUG_MODE
-  UART_SEND("\nsending N\n");
-#endif
-
   print_mpi_UART(&rsa_cont.N);
-
-#ifdef DEBUG_MODE
-  UART_SEND("\nfinished sending N\n");
-#endif
-
-#ifdef DEBUG_MODE
-  UART_SEND("\nsending E\n");
-#endif
-
   print_mpi_UART(&rsa_cont.E);
-
-#ifdef DEBUG_MODE
-  UART_SEND("\nfinished sending E\n");
-#endif
-
   UART_SEND("\n");
+}
 
-#ifdef DEBUG_MODE
-  UART_SEND("\nsending D\n");
-  print_mpi_UART(&rsa_cont.D);
-  UART_SEND("\nfinished sending D\n");
-
-  UART_SEND("\nsending P\n");
-  print_mpi_UART(&rsa_cont.P);
-  UART_SEND("\nfinished sending P\n");
-#endif
-
-
-  HAL_Delay(100);
-  
 #define SHA256_SIZE 64
+void signSHA256() {
   unsigned char sha256[SHA256_SIZE];
   unsigned char signedSHA[500];
   HAL_StatusTypeDef state;
+  int error;
+
   while ((state = HAL_UART_Receive (&huart1, sha256, SHA256_SIZE, 3000)) != HAL_OK) {
     if (state == HAL_BUSY)
       UART_SEND("errorBUSY\n");
@@ -370,49 +207,90 @@ UART_SEND("\n");
     else if (state == HAL_ERROR)
       UART_SEND("errorERROR\n");
   }
-  //HAL_UART_Receive (&huart1, sha256 + 1, SHA256_SIZE - 1, 3000);
+
   HAL_Delay(100);
   UART_SEND_LEN((char *)sha256, SHA256_SIZE);
   UART_SEND("\n");
 
-  /*
-  if (rsa_cont.padding == MBEDTLS_RSA_PKCS_V15)
-    UART_SEND("bon padding\n");
-  else
-    UART_SEND("mauvais padding\n");
-
-  if (mbedtls_md_info_from_type(MBEDTLS_MD_SHA256))
-    UART_SEND("bon md\n");
-  else
-    UART_SEND("mauvais md\n");
-    */
-
-
-  
   error = mbedtls_rsa_rsassa_pkcs1_v15_sign(&rsa_cont, mbedtls_hmac_drbg_random, &cont,
       MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256, SHA256_SIZE, sha256, signedSHA);
 
   HAL_Delay(100);
   if (error) {
-    if (error == MBEDTLS_ERR_RSA_BAD_INPUT_DATA) {
-      UART_SEND("signature failed 0\n");
-    }
-    if (error == MBEDTLS_ERR_RSA_HW_ACCEL_FAILED) {
-      UART_SEND("signature failed 1\n");
-    }
-    if (error == MBEDTLS_ERR_RSA_INVALID_PADDING) {
-      UART_SEND("signature failed 2\n");
-    }
-    if (error == MBEDTLS_ERR_RSA_KEY_CHECK_FAILED) {
-      UART_SEND("signature failed 3\n");
-    }
-    UART_SEND("received sha256 ");
-    UART_SEND_LEN((char *)sha256, SHA256_SIZE);
-    UART_SEND(" \n");
+
+    if (error == MBEDTLS_ERR_RSA_BAD_INPUT_DATA)
+      UART_SEND("error: signature failed input\n");
+    else
+      UART_SEND("error: signature failed\n");
+
   } else {
     HAL_UART_Transmit (&huart1, signedSHA, sizeof(signedSHA) , 300);
     UART_SEND("\n");
   }
+}
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_USART1_UART_Init(void);
+//static void MX_IWDG_Init(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* useR CODE BEGIN 1 */
+//allows for stack allocation
+#define MEM_BUFF_SIZE 10000
+  unsigned char memory_buffer[MEM_BUFF_SIZE];
+  mbedtls_memory_buffer_alloc_init(memory_buffer, MEM_BUFF_SIZE);
+
+  mbedtls_platform_set_exit(myExit);
+  mbedtls_platform_set_snprintf(mysnprintf);
+
+  /* USER CODE END 1 */
+  
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+  mbedtls_hmac_drbg_init(&cont);
+  mbedtls_rsa_init(&rsa_cont, MBEDTLS_RSA_PKCS_V15, 0);
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_USART2_UART_Init();
+  MX_USART1_UART_Init();
+  //MX_IWDG_Init();
+  MX_MBEDTLS_Init();
+  /* USER CODE BEGIN 2 */
   
   /* USER CODE END 2 */
 
@@ -425,20 +303,13 @@ UART_SEND("\n");
 
     /* USER CODE BEGIN 3 */
     __WFE ();
-    /*HAL_IWDG_Refresh (&hiwdg);
-    if (received)
-    {
-      received = false;
-      if (c >= 'a' && c <= 'z')
-        c -= 32;
-      else if (c >= 'A' && c <= 'Z')
-        c += 32;
-      HAL_UART_Transmit (&huart1, &c, 1, 200);
-      HAL_UART_Receive_IT (&huart1, &c, 1);
-    }
-    */
     
+    /* if rsa exist
+     *   load
+     * else
+     * */
 
+    
     
 
   }
