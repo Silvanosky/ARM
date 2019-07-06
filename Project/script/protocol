@@ -1,0 +1,59 @@
+Python:
+
+Read: PASS ou OK
+
+    Si PASS (configuration du password necessaire)
+
+        Write: "mot_de_passe_en_clair"
+
+    Sinon
+
+        while true
+
+            Write: "mot_de_passe"
+            Read: "OK" ou "KO"
+            Si OK
+                break
+
+Write: "1" ou "2" ou "3" (1 = publickey, 2 = signature, 3 = exit)
+Si 1
+    Read: "publickey"
+Si 2
+    Write: "sha256"
+    Read: "signature"
+Si 3
+    exit
+
+Sachant que Write est:
+    while true
+        write: "texte"
+        Read: "errorBUSY" ou "errorTIMEOUT" ou "errorERROR" ou "autre"
+        Si autre
+            return autre
+
+
+Carte:
+
+Check presence de mdp
+Si present
+
+    Write: "OK"
+    Read: "mdp"
+    Si mdp match a la memoire
+        Write: "OK"
+    Sinon:
+        Write: "KO"
+
+Sinon
+
+    Write: "PASS"
+    Read: "mdp"
+
+Read: "1" ou "2" ou "3" (1 = publickey, 2 = signature, 3 = exit)
+Si 1
+    Write: "publickey"
+Si 2
+    Read: "sha256"
+    Write: "signature"
+Si 3
+    exit
