@@ -105,6 +105,22 @@ void UART_SEND_LEN(const char *str, unsigned length) {
       length, 300);
 }
 
+void UART_RECEIVE(unsigned char* buffer, size_t buffer_len, char* instruction) {
+  HAL_StatusTypeDef state;
+  while ((state = HAL_UART_Receive (&huart1, buffer, buffer_len, 300)) != HAL_OK) {
+    if (instruction) {
+      UART_SEND(instruction);
+    } else {
+      if (state == HAL_BUSY)
+        UART_SEND("errorBUSY\n");
+      else if (state == HAL_TIMEOUT)
+        UART_SEND("errorTIMEOUT\n");
+      else if (state == HAL_ERROR)
+        UART_SEND("errorERROR\n");
+    }
+  }
+  UART_SEND("FINISHED\n");
+}
 void myExit(int status) {
   if (status == 1)
     UART_SEND("exit with error code 1\n");
@@ -185,8 +201,17 @@ void genKey() {
   }
   HAL_Delay(1000);
   error = mbedtls_rsa_gen_key(&rsa_cont, mbedtls_hmac_drbg_random, &cont, 1024, 65537);
-  HAL_Delay(1000);
-
+  if (!error) {
+    keyGenerated = true;
+  } else {
+    UART_SEND("rsa generation failed\n");
+  }
+}
+void sendPublicKey() {
+  if (!keyGenerated) {
+    UART_SEND("error no private key generated\n");
+    return;
+  }
   print_mpi_UART(&rsa_cont.N);
   print_mpi_UART(&rsa_cont.E);
   UART_SEND("\n");
@@ -196,22 +221,11 @@ void genKey() {
 void signSHA256() {
   unsigned char sha256[SHA256_SIZE];
   unsigned char signedSHA[500];
-  HAL_StatusTypeDef state;
   int error;
 
-  while ((state = HAL_UART_Receive (&huart1, sha256, SHA256_SIZE, 3000)) != HAL_OK) {
-    if (state == HAL_BUSY)
-      UART_SEND("errorBUSY\n");
-    else if (state == HAL_TIMEOUT)
-      UART_SEND("errorTIMEOUT\n");
-    else if (state == HAL_ERROR)
-      UART_SEND("errorERROR\n");
-  }
+  UART_RECEIVE(sha256, SHA256_SIZE, NULL);
 
   HAL_Delay(100);
-  UART_SEND_LEN((char *)sha256, SHA256_SIZE);
-  UART_SEND("\n");
-
   error = mbedtls_rsa_rsassa_pkcs1_v15_sign(&rsa_cont, mbedtls_hmac_drbg_random, &cont,
       MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256, SHA256_SIZE, sha256, signedSHA);
 
@@ -263,6 +277,9 @@ int main(void)
   mbedtls_platform_set_exit(myExit);
   mbedtls_platform_set_snprintf(mysnprintf);
 
+#define PWD_SIZE 50
+  unsigned char passwd[PWD_SIZE];
+  unsigned char passwd2[PWD_SIZE];
   /* USER CODE END 1 */
   
 
@@ -296,6 +313,9 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  genKey();
+  UART_RECEIVE(passwd, PWD_SIZE, "PASS\n");
+  
 
   while (1)
   {
@@ -303,14 +323,45 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     __WFE ();
-    
-    /* if rsa exist
-     *   load
-     * else
-     * */
+    unsigned char cmd;
+    bool authorized = true;
+    UART_RECEIVE(&cmd, 1, NULL);
 
-    
-    
+
+    if (cmd == '1') {
+      UART_SEND("errorTIMEOUT\n");
+      UART_RECEIVE(passwd2, PWD_SIZE, "PASS\n");
+      for (unsigned k = 0; k < PWD_SIZE; ++k) {
+        if (passwd[k] != passwd2[k])
+          authorized = false;
+      }
+      if (!authorized) {
+        UART_SEND("ACCESSDENIED\n");
+        continue;
+      }
+      UART_SEND("ACCESSGRANTED\n");
+      sendPublicKey();
+
+
+    } else if (cmd == '2') {
+      UART_SEND("errorTIMEOUT\n");
+      UART_RECEIVE(passwd2, PWD_SIZE, "PASS\n");
+      for (unsigned k = 0; k < PWD_SIZE; ++k) {
+        if (passwd[k] != passwd2[k])
+          authorized = false;
+      }
+      if (!authorized) {
+        UART_SEND("ACCESSDENIED\n");
+        continue;
+      }
+      UART_SEND("ACCESSGRANTED\n");
+      signSHA256();
+
+
+    } else if (cmd == '3') {
+      // write flash
+      UART_SEND("goodbye");
+    }
 
   }
   /* USER CODE END 3 */
