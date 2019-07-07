@@ -53,6 +53,8 @@ typedef enum {
 typedef struct {
 	size_t sign_size;
 	size_t app_size;
+	__IO uint8_t signature[1024];
+	__IO uint8_t app[1];
 } app_t;
 
 /* Start and end addresses of the user application. */
@@ -64,7 +66,7 @@ typedef struct {
 
 #define FLASH_APP2 (ADDR_FLASH_SECTOR_4)
 #define FLASH_APP2_SIGN (FLASH_APP2 + sizeof(app_t))
-#define FLASH_APP2_START_ADDRESS (FLASH_APP2_SIGN + FLASH_SIGN_SIZE)
+//#define FLASH_APP2_START_ADDRESS (FLASH_APP2)
 
 #define FLASH_BTL_END_ADDRESS (ADDR_FLASH_SECTOR_1 - 0x1u)
 #define FLASH_APP_END_ADDRESS (ADDR_FLASH_SECTOR_3 - 0x1u)
@@ -72,6 +74,6 @@ typedef struct {
 
 flash_status flash_erase(uint32_t address, uint32_t NbOfSectors);
 flash_status flash_write(uint32_t address, uint32_t *data, uint32_t length);
-void flash_jump_to_app(void);
 
+void flash_jump_to_app(__IO app_t* app);
 #endif /* FLASH_H_ */

@@ -19,63 +19,61 @@
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
+#include "crypto.h"
+
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_snprintf        snprintf
-#define mbedtls_printf          printf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
-
-#include "crypto.h"
-
-#if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_MD_C) || \
-    !defined(MBEDTLS_SHA256_C) || !defined(MBEDTLS_PK_PARSE_C) ||   \
-    !defined(MBEDTLS_FS_IO)
-bool check_hash(const uint8_t* sign, size_t signsize, const uint8_t* prg, size_t prgsize)
-{
-    mbedtls_printf("MBEDTLS_BIGNUM_C and/or MBEDTLS_MD_C and/or "
-           "MBEDTLS_SHA256_C and/or MBEDTLS_PK_PARSE_C and/or "
-           "MBEDTLS_FS_IO not defined.\n");
-    return false;
-}
-#else
-
 #include "mbedtls/error.h"
 #include "mbedtls/md.h"
 #include "mbedtls/pk.h"
+#include "crypto.h"
+#include "uart.h"
+#include "flash.h"
 
 #include <stdio.h>
 #include <string.h>
 
-const unsigned char key[2048];
+
+static const unsigned char * key = (unsigned char *)"-----BEGIN PUBLIC KEY-----\n"
+"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3tXUzyOI913cG5JQQpZf8emFB/Za\n"
+"CXBAwpxJk2U/csWTwde/qVo3W0uoowjwpJgIeC/visyiR4AAxb1u138Fsw==\n"
+"-----END PUBLIC KEY-----\n";
+
+bool check_app(__IO app_t* app)
+{
+	//check_hash(&app->signature, app->sign_size, &app->app, app->app_size);
+	return true;
+}
 
 /**
 * Use saved in bootloader key to check input hash
 */
+
+
 bool check_hash(const uint8_t* sign, size_t signsize, const uint8_t* prg, size_t prgsize)
 {
     int ret = 1;
     int exit_code = MBEDTLS_EXIT_FAILURE;
     unsigned char hash[32];
 
+	unsigned char memory_buf[30000];
+	mbedtls_memory_buffer_alloc_init( memory_buf, sizeof(memory_buf) );
+
     mbedtls_pk_context pk;
     mbedtls_pk_init( &pk );
 
-    mbedtls_printf( "\n  . Reading public key from '%s'\n"); //TODO remove
+    uart_tx_str((uint8_t*)"\nReading public key from\n"); //TODO remove
+    uart_tx_str((uint8_t*)key); //TODO remove
 
-    if( (ret = mbedtls_pk_parse_public_key(&pk, key, sizeof(key))) != 0 ) {
-        mbedtls_printf( " failed\n  ! mbedtls_pk_parse_public_key returned -0x%04x\n", -ret );
+    if( (ret = mbedtls_pk_parse_public_key(&pk, key, 183)) != 0 ) {
+		char buf[128];
+		sprintf(buf, "Error mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret);
+        uart_tx_str((uint8_t*)buf);
         return false;
     }
 
@@ -85,18 +83,18 @@ bool check_hash(const uint8_t* sign, size_t signsize, const uint8_t* prg, size_t
                     mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ),
                     prg, prgsize, hash) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! Could not open or read %s\n\n", argv[2] );
+		uart_tx_str((uint8_t*)" failed\n  ! Could not open or read\n\n");
         return false;
     }
 
     if( ( ret = mbedtls_pk_verify( &pk, MBEDTLS_MD_SHA256, hash, 0,
                            sign, signsize) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_pk_verify returned -0x%04x\n", -ret );
+        uart_tx_str((uint8_t*)" failed\n  ! mbedtls_pk_verify returned -0x\n");
         return false;
     }
 
-    mbedtls_printf( "\n  . OK (the signature is valid)\n\n" );
+    uart_tx_str((uint8_t*)"\n  . OK (the signature is valid)\n\n" );
 
     exit_code = MBEDTLS_EXIT_SUCCESS;
 
@@ -104,5 +102,3 @@ bool check_hash(const uint8_t* sign, size_t signsize, const uint8_t* prg, size_t
 
     return true;
 }
-#endif /* MBEDTLS_BIGNUM_C && MBEDTLS_SHA256_C &&
-          MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO */

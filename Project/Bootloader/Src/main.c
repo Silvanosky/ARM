@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include "uart.h"
 #include "xmodem.h"
+#include "crypto.h"
 
 /* USER CODE END Includes */
 
@@ -169,6 +170,14 @@ int main(void)
 		  uart_tx_str((uint8_t*)"\n\rFailed... Please try again.\n\r");
 		  continue;
 	  }
+	  __IO app_t* app = (__IO app_t*) FLASH_APP2;
+	  if (!check_app(app))
+	  {
+		  uart_tx_str((uint8_t*)"\n\rFailed verification... Please try again.\n\r");
+		  continue;
+	  }
+	  flash_jump_to_app(app);
+
 
     /* USER CODE END WHILE */
 

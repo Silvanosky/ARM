@@ -31,16 +31,16 @@ bool xmodem_receive(void)
 	if (flash_erase(FLASH_APP2, 1u) != FLASH_OK) {
 		return false;
 	}
-	app_t app;
+	__IO app_t* app = (__IO app_t*) FLASH_APP2;
 	uart_tx_str((uint8_t*)"\n\rSend signature file\n\r");
-	app.sign_size = xmodem_receive_file(FLASH_APP2_SIGN, FLASH_SIGN_SIZE);
-	if (!app.sign_size)
+	xmodem_receive_file(FLASH_APP2, FLASH_SECTOR_SIZE);
+	if (!app->sign_size && !app->app_size)
 		return false;
 
 	//uart_tx_str((uint8_t*)"\n\rSend update file\n\r");
 
 	char b[128];
-	sprintf(b, "Downloaded signature: %dByte and app: %dByte\n", app.sign_size, app.app_size);
+	sprintf(b, "Downloaded signature: %dByte and app: %dByte\n", app->sign_size, app->app_size);
 	uart_tx_str((uint8_t*)b);
 
 	uart_tx_str((uint8_t*)"\n\rApplication downloaded!\n\r");

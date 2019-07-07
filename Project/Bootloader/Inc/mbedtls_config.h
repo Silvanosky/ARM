@@ -147,7 +147,7 @@
  *
  * Enable this layer to allow use of alternative memory allocators.
  */
-//#define MBEDTLS_PLATFORM_MEMORY
+#define MBEDTLS_PLATFORM_MEMORY
 
 /**
  * \def MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
@@ -1099,7 +1099,7 @@
  *
  * This enables support for RSAES-OAEP and RSASSA-PSS operations.
  */
-//#define MBEDTLS_PKCS1_V21
+#define MBEDTLS_PKCS1_V21
 
 /**
  * \def MBEDTLS_RSA_NO_CRT
@@ -2288,7 +2288,7 @@
  *
  * Enable this module to enable the buffer memory allocator.
  */
-//#define MBEDTLS_MEMORY_BUFFER_ALLOC_C
+#define MBEDTLS_MEMORY_BUFFER_ALLOC_C
 
 /**
  * \def MBEDTLS_NET_C
@@ -2378,7 +2378,7 @@
  *
  * This modules adds support for encoding / writing PEM files.
  */
-//#define MBEDTLS_PEM_WRITE_C
+#define MBEDTLS_PEM_WRITE_C
 
 /**
  * \def MBEDTLS_PK_C
@@ -2517,7 +2517,7 @@
  *
  * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C
  */
-//#define MBEDTLS_RSA_C
+#define MBEDTLS_RSA_C
 
 /**
  * \def MBEDTLS_SHA1_C
@@ -2766,7 +2766,7 @@
  *
  * This module is used for reading X.509 certificate request.
  */
-//#define MBEDTLS_X509_CSR_PARSE_C
+#define MBEDTLS_X509_CSR_PARSE_C
 
 /**
  * \def MBEDTLS_X509_CREATE_C

@@ -122,13 +122,13 @@ flash_status flash_write(uint32_t address, uint32_t *data, uint32_t length)
  * @param   void
  * @return  void
  */
-void flash_jump_to_app(void)
+void flash_jump_to_app(__IO app_t* app)
 {
   /* Function pointer to the address of the user application. */
   fnc_ptr jump_to_app;
-  jump_to_app = (fnc_ptr)(*(volatile uint32_t*) (FLASH_APP_START_ADDRESS+4u));
+  jump_to_app = (fnc_ptr)(*(volatile uint32_t*) (&app->app+4u));
   HAL_DeInit();
   /* Change the main stack pointer. */
-  __set_MSP(*(volatile uint32_t*)FLASH_APP_START_ADDRESS);
+  __set_MSP(*(volatile uint32_t*)&app->app);
   jump_to_app();
 }

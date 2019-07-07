@@ -4,14 +4,6 @@ import sys
 import struct
 import hashlib
 
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.backends import default_backend
-
-from cryptography.hazmat.primitives import serialization as crypto_serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend as crypto_default_backend
-
 from serial import Serial
 from xmodem import XMODEM
 
@@ -20,22 +12,13 @@ import os.path
 privkeyfile = "./keys/private"
 publkeyfile = "./keys/public"
 
+from mbedtls import pk
+
 if True:
 #if not os.path.isfile(privkeyfile):
-    key = rsa.generate_private_key(
-        backend=crypto_default_backend(),
-        public_exponent=65537,
-        key_size=1024
-    )
-    privkey = key.private_bytes(
-        crypto_serialization.Encoding.PEM,
-        crypto_serialization.PrivateFormat.PKCS8,
-        crypto_serialization.NoEncryption())
-
-    public_key = key.public_key().public_bytes(
-        crypto_serialization.Encoding.PEM,
-        crypto_serialization.PublicFormat.PKCS1
-    )
+    rsa = pk.RSA()
+    privkey = rsa.generate()
+    public_key = rsa.export_public_key(format="PEM")
 
     priv = open(privkeyfile, "w")
     priv.write(privkey)
@@ -48,8 +31,7 @@ if True:
     print(public_key)
 else:
     with open(privkeyfile) as f:
-        privkey = serialization.load_pem_private_key(
-            f.read(), password=None, backend=default_backend())
+        privkey = pk.RSA.from_buffer(f.read())
 
 messagefile = sys.argv[1]
 
@@ -57,12 +39,7 @@ with open(messagefile) as m:
     message = m.read()
     prehashed = hashlib.sha256(message).hexdigest()
 
-sig = privkey.sign(
-    prehashed,
-    padding.PSS(
-        mgf=padding.MGF1(hashes.SHA256()),
-        salt_length=padding.PSS.MAX_LENGTH),
-    hashes.SHA256())
+sig = rsa.sign(message)
 
 f = open("sign", "w")
 f.write(sig)
