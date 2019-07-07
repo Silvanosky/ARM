@@ -20,7 +20,7 @@ import os.path
 privkeyfile = "./keys/private"
 publkeyfile = "./keys/public"
 
-if True:
+if False:
 #if not os.path.isfile(privkeyfile):
     key = rsa.generate_private_key(
         backend=crypto_default_backend(),

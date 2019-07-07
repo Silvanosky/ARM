@@ -54,7 +54,7 @@ typedef struct {
 	size_t sign_size;
 	size_t app_size;
 	__IO uint8_t signature[1024];
-	__IO uint8_t app[1];
+	__IO uint8_t app[0];
 } app_t;
 
 /* Start and end addresses of the user application. */

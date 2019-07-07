@@ -1,4 +1,7 @@
 #include "flash.h"
+#include "uart.h"
+
+#include <stdio.h>
 
 /* Function pointer for jumping to user application. */
 typedef void (*fnc_ptr)(void);
@@ -124,11 +127,17 @@ flash_status flash_write(uint32_t address, uint32_t *data, uint32_t length)
  */
 void flash_jump_to_app(__IO app_t* app)
 {
+  char buf[128];
+  sprintf(buf, "Jump to 0x%lx\n", FLASH_APP2);
+  uart_tx_str((uint8_t*) buf);
   /* Function pointer to the address of the user application. */
   fnc_ptr jump_to_app;
-  jump_to_app = (fnc_ptr)(*(volatile uint32_t*) (&app->app+4u));
+  jump_to_app = (fnc_ptr)(*(volatile uint32_t*) (FLASH_APP2+4u));
   HAL_DeInit();
+  SCB->VTOR = (uint32_t)FLASH_APP2;
   /* Change the main stack pointer. */
-  __set_MSP(*(volatile uint32_t*)&app->app);
+  __set_MSP(*(volatile uint32_t*)FLASH_APP2);
+
+
   jump_to_app();
 }

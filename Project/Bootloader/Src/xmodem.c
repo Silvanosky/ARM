@@ -34,14 +34,14 @@ bool xmodem_receive(void)
 	__IO app_t* app = (__IO app_t*) FLASH_APP2;
 	uart_tx_str((uint8_t*)"\n\rSend signature file\n\r");
 	xmodem_receive_file(FLASH_APP2, FLASH_SECTOR_SIZE);
-	if (!app->sign_size && !app->app_size)
-		return false;
+//	if (!app->sign_size && !app->app_size)
+//		return false;
 
 	//uart_tx_str((uint8_t*)"\n\rSend update file\n\r");
 
-	char b[128];
+/*	char b[128];
 	sprintf(b, "Downloaded signature: %dByte and app: %dByte\n", app->sign_size, app->app_size);
-	uart_tx_str((uint8_t*)b);
+	uart_tx_str((uint8_t*)b);*/
 
 	uart_tx_str((uint8_t*)"\n\rApplication downloaded!\n\r");
 	uart_tx_str((uint8_t*)"Starting verification...\n\r");

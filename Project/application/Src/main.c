@@ -160,6 +160,7 @@ void print_mpi_UART(mbedtls_mpi *mpi) {
 
   UART_SEND(buffer);
 }
+#define DEBUG_MODE
 
 /* USER CODE END PV */
 
