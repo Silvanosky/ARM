@@ -148,13 +148,17 @@ int main(void)
   MX_MBEDTLS_Init();
   /* USER CODE BEGIN 2 */
 
-  if(!HAL_GPIO_ReadPin(BTN_GPIO_Port, BTN_Pin))
+  if(HAL_GPIO_ReadPin(BTN_GPIO_Port, BTN_Pin))
   {
-	  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+	  __IO app_t* app = (__IO app_t*) FLASH_APP2;
+	  if (!check_app(app))
+	  {
+		  uart_tx_str((uint8_t*)"\n\rFailed verification... Please try again.\n\r");
+	  }
+	  flash_jump_to_app(app);
+	  return 0;
   }
-  else {
-	  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-  }
+  //Button pressed enter flash
   /* USER CODE END 2 */
 
   /* Infinite loop */

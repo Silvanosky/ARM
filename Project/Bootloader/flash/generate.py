@@ -101,7 +101,7 @@ status = modem.send(open("output", "r"), retry=8)
 while True:
     data = s.readline()
     if data:
-        print data,
+        print(data, end='')
 s.close()
 
 print(status)
